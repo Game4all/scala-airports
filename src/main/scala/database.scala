@@ -1,0 +1,178 @@
+import slick.lifted.Tag;
+import slick.jdbc.H2Profile.api._
+import scala.concurrent.Future
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+import scala.concurrent.ExecutionContext.Implicits.global
+import javax.xml.crypto.Data
+
+/** Base de données du dataset de l'aéroport
+  */
+class DatasetDB {
+  private val CONNECTION_STRING = "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1"
+
+  // la DB
+  val jdbc = Database.forURL(
+    url = CONNECTION_STRING,
+    driver = "org.h2.Driver",
+    keepAliveConnection = true
+  )
+
+  /*
+   * Aéroports
+   */
+  val airports: TableQuery[AirportTable] = TableQuery[AirportTable]
+  /*
+   * Runways aka piste d'atterissage
+   */
+  val runways: TableQuery[RunwaysTable] = TableQuery[RunwaysTable]
+  /*
+   * Pays
+   */
+  val countries: TableQuery[CountryTable] = TableQuery[CountryTable]
+
+  /** Remplit la BDD avec les collections de modèles passées en paramètres.
+    */
+  def populate(c: List[Country], r: List[Runway], a: List[Airport]): Unit =
+    Await.result(
+      Future.sequence(
+        Seq(
+          jdbc.run(airports ++= a),
+          jdbc.run(runways ++= r),
+          jdbc.run(countries ++= c)
+        )
+      ),
+      Duration(10, "s")
+    )
+
+  /// Initialise la BDD.
+  private def init(): Unit = {
+    val res1 = jdbc.run(airports.schema.create)
+    val res2 = jdbc.run(runways.schema.create)
+    val res3 = jdbc.run(countries.schema.create)
+
+    Await.result(Future.sequence(Seq(res1, res2, res3)), Duration(10, "s"))
+  }
+
+  init()
+
+  /** Ferme la connexion existante a la BDD en mémoire.
+    */
+  def close(): Unit =
+    jdbc.close()
+}
+
+// ==================================================================== Tables BDD ==============================================
+
+class AirportTable(tag: Tag) extends Table[Airport](tag, "airports") {
+  def id = column[Int]("id", O.PrimaryKey)
+  def ident = column[String]("ident")
+  def airportType = column[String]("type")
+  def name = column[String]("name")
+  def latitudeDeg = column[Double]("latitude_deg")
+  def longitudeDeg = column[Double]("longitude_deg")
+  def elevationFt = column[Option[Int]]("elevation_ft")
+  def continent = column[Option[String]]("continent")
+  def isoCountry = column[Option[String]]("iso_country")
+  def isoRegion = column[String]("iso_region")
+  def municipality = column[Option[String]]("municipality")
+  def scheduledService = column[String]("scheduled_service")
+  def gpsCode = column[Option[String]]("gps_code")
+  def iataCode = column[Option[String]]("iata_code")
+  def localCode = column[Option[String]]("local_code")
+  def homeLink = column[Option[String]]("home_link")
+  def wikipediaLink = column[Option[String]]("wikipedia_link")
+  def keywords = column[Option[String]]("keywords")
+
+  def * = (
+    id,
+    ident,
+    airportType,
+    name,
+    latitudeDeg,
+    longitudeDeg,
+    elevationFt,
+    continent,
+    isoCountry,
+    isoRegion,
+    municipality,
+    scheduledService,
+    gpsCode,
+    iataCode,
+    localCode,
+    homeLink,
+    wikipediaLink,
+    keywords
+  ) <> (Airport.apply.tupled, Airport.unapply)
+}
+
+// Countries
+
+class CountryTable(tag: Tag) extends Table[Country](tag, "countries") {
+  def id = column[Int]("id", O.PrimaryKey)
+  def code = column[Option[String]]("code")
+  def name = column[String]("name")
+  def continent = column[Option[String]]("continent")
+  def wikipediaLink = column[Option[String]]("wikipedia_link")
+  def keywords = column[Option[String]]("keywords")
+
+  def * = (
+    id,
+    code,
+    name,
+    continent,
+    wikipediaLink,
+    keywords
+  ) <> (Country.apply.tupled, Country.unapply)
+}
+
+// Runways
+
+class RunwaysTable(tag: Tag) extends Table[Runway](tag, "runways") {
+  def id = column[Int]("id", O.PrimaryKey)
+  def airportRef = column[Int]("airport_ref")
+  def airportIdent = column[String]("airport_ident")
+  def lengthFt = column[Option[Int]]("length_ft")
+  def widthFt = column[Option[Int]]("width_ft")
+  def surface = column[Option[String]]("surface")
+  def lighted = column[Int]("lighted")
+  def closed = column[Int]("closed")
+  def leIdent = column[Option[String]]("le_ident")
+  def leLatitudeDeg = column[Option[Double]]("le_latitude_deg")
+  def leLongitudeDeg = column[Option[Double]]("le_longitude_deg")
+  def leElevationFt = column[Option[Int]]("le_elevation_ft")
+  def leHeadingDegT = column[Option[Double]]("le_heading_degT")
+  def leDisplacedThresholdFt = column[Option[Int]]("le_displaced_threshold_ft")
+  def heIdent = column[Option[String]]("he_ident")
+  def heLatitudeDeg = column[Option[Double]]("he_latitude_deg")
+  def heLongitudeDeg = column[Option[Double]]("he_longitude_deg")
+  def heElevationFt = column[Option[Int]]("he_elevation_ft")
+  def heHeadingDegT = column[Option[Double]]("he_heading_degT")
+  def heDisplacedThresholdFt = column[Option[Int]]("he_displaced_threshold_ft")
+
+  // Map columns to the case class
+  def * = (
+    id,
+    airportRef,
+    airportIdent,
+    lengthFt,
+    widthFt,
+    surface,
+    lighted,
+    closed,
+    leIdent,
+    leLatitudeDeg,
+    leLongitudeDeg,
+    leElevationFt,
+    leHeadingDegT,
+    leDisplacedThresholdFt,
+    heIdent,
+    heLatitudeDeg,
+    heLongitudeDeg,
+    heElevationFt,
+    heHeadingDegT,
+    heDisplacedThresholdFt
+  ) <> (Runway.apply.tupled, Runway.unapply)
+}
+
+

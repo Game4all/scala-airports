@@ -58,6 +58,8 @@ object Airport {
   }
 }
 
+// ====================================================== Pays ====================================================
+
 // Représente un pays.
 case class Country(
     id: Int,
@@ -80,6 +82,8 @@ object Country {
     )
   }
 }
+
+// =========================================================== Piste d'atterissage ========================================
 
 // Représente une piste d'atterissage
 case class Runway(

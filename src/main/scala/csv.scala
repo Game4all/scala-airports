@@ -41,7 +41,7 @@ def readCsvLine(
     case head :: tail => {
       if (head == '"') {
         readCsvLine(tail, sep, splits, curr_item, !in_str)
-      } else if (head != sep | in_str) {
+      } else if (head != sep || in_str) {
         readCsvLine(tail, sep, splits, curr_item.appended(head), in_str)
       } else {
         readCsvLine(tail, sep, curr_item.mkString :: splits, Nil, in_str)

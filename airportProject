@@ -16,7 +16,7 @@ C.1) For this project you'll write a program parsing 3 CSV files. The files cont
 
 M.2.1) You're program will be a command line program that will ask the user for two options - Query or Reports.
 
-M.2.2) Query Option will ask the user for the country name or code and display the airports & runways at each airport. The input can be country code or country name.
+FAIT = M.2.2) Query Option will ask the user for the country name or code and display the airports & runways at each airport. The input can be country code or country name.
 
 M.2.3) Choosing Reports will display the following (possibly through a menu):
 • 10 countries with highest number of airports (with count) and countries  with lowest number of airports.

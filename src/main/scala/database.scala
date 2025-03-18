@@ -11,8 +11,8 @@ import javax.xml.crypto.Data
 class DatasetDB {
   private val CONNECTION_STRING = "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1"
 
-  // la DB
-  val jdbc = Database.forURL(
+  // la DB mise en privé pour forcer de passer par les tables slick
+  private val jdbc = Database.forURL(
     url = CONNECTION_STRING,
     driver = "org.h2.Driver",
     keepAliveConnection = true
@@ -45,6 +45,16 @@ class DatasetDB {
       Duration(10, "s")
     )
 
+  /** Execute la requête slick passée en paramètres
+    */
+  def execute[B](f: DatasetDB => DBIO[B]): Future[B] =
+    jdbc.run(f(this))
+
+  /** Execute la requête slick passée en paramètres et attend le résultat.
+    */
+  def executeSync[B](f: DatasetDB => DBIO[B]): B =
+    Await.result(jdbc.run(f(this)), Duration.Inf)
+
   /// Initialise la BDD.
   private def init(): Unit = {
     val res1 = jdbc.run(airports.schema.create)
@@ -67,41 +77,41 @@ class DatasetDB {
 class AirportTable(tag: Tag) extends Table[Airport](tag, "airports") {
   def id = column[Int]("id", O.PrimaryKey)
   def ident = column[String]("ident")
-  def airportType = column[String]("type")
+  def `type` = column[String]("type")
   def name = column[String]("name")
-  def latitudeDeg = column[Double]("latitude_deg")
-  def longitudeDeg = column[Double]("longitude_deg")
-  def elevationFt = column[Option[Int]]("elevation_ft")
+  def latitude_deg = column[Double]("latitude_deg")
+  def longitude_deg = column[Double]("longitude_deg")
+  def elevation_ft = column[Option[Int]]("elevation_ft")
   def continent = column[Option[String]]("continent")
-  def isoCountry = column[Option[String]]("iso_country")
-  def isoRegion = column[String]("iso_region")
+  def iso_country = column[Option[String]]("iso_country")
+  def iso_region = column[String]("iso_region")
   def municipality = column[Option[String]]("municipality")
-  def scheduledService = column[String]("scheduled_service")
-  def gpsCode = column[Option[String]]("gps_code")
-  def iataCode = column[Option[String]]("iata_code")
-  def localCode = column[Option[String]]("local_code")
-  def homeLink = column[Option[String]]("home_link")
-  def wikipediaLink = column[Option[String]]("wikipedia_link")
+  def scheduled_service = column[String]("scheduled_service")
+  def gps_code = column[Option[String]]("gps_code")
+  def iata_code = column[Option[String]]("iata_code")
+  def local_code = column[Option[String]]("local_code")
+  def home_Link = column[Option[String]]("home_link")
+  def wikipedia_link = column[Option[String]]("wikipedia_link")
   def keywords = column[Option[String]]("keywords")
 
   def * = (
     id,
     ident,
-    airportType,
+    `type`,
     name,
-    latitudeDeg,
-    longitudeDeg,
-    elevationFt,
+    latitude_deg,
+    longitude_deg,
+    elevation_ft,
     continent,
-    isoCountry,
-    isoRegion,
+    iso_country,
+    iso_region,
     municipality,
-    scheduledService,
-    gpsCode,
-    iataCode,
-    localCode,
-    homeLink,
-    wikipediaLink,
+    scheduled_service,
+    gps_code,
+    iata_code,
+    local_code,
+    home_Link,
+    wikipedia_link,
     keywords
   ) <> (Airport.apply.tupled, Airport.unapply)
 }
@@ -113,7 +123,7 @@ class CountryTable(tag: Tag) extends Table[Country](tag, "countries") {
   def code = column[Option[String]]("code")
   def name = column[String]("name")
   def continent = column[Option[String]]("continent")
-  def wikipediaLink = column[Option[String]]("wikipedia_link")
+  def wikipedia_link = column[Option[String]]("wikipedia_link")
   def keywords = column[Option[String]]("keywords")
 
   def * = (
@@ -121,7 +131,7 @@ class CountryTable(tag: Tag) extends Table[Country](tag, "countries") {
     code,
     name,
     continent,
-    wikipediaLink,
+    wikipedia_link,
     keywords
   ) <> (Country.apply.tupled, Country.unapply)
 }
@@ -174,5 +184,3 @@ class RunwaysTable(tag: Tag) extends Table[Runway](tag, "runways") {
     heDisplacedThresholdFt
   ) <> (Runway.apply.tupled, Runway.unapply)
 }
-
-

@@ -1,25 +1,47 @@
 import scala.Option
 import scala.io.Source
+import scala.io.StdIn
 import scala.annotation.tailrec
 import slick.jdbc.H2Profile.api._
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
-@main def main(): Unit =
-  // liste des trucs chargés
-  val airports = readCsv("airports.csv", Airport.fromCsv)
-  val countries = readCsv("countries.csv", Country.fromCsv)
-  val runways = readCsv("runways.csv", Runway.fromCsv)
+@tailrec
+def eval_loop(db: DatasetDB): Unit =
+  println("")
+  println("Entrez le nom du pays à chercher")
+  print(">>>")
 
-  val db = DatasetDB()
-  db.populate(countries, runways, airports)
-  println("Populating de la BDD OK")
+  val input = StdIn.readLine()
 
   // Coder les requêtes dans DBQueries
 
-  // TODO: FINIR LES QUERIES
-  // val c = Await.result(DBQueries.fetchAirportsWithRunways(db), Duration.Inf)
+  val (pays, paires) = DBQueries.fetchCountryAirportsRunways(db, input)
+  (pays, paires) match
+    case (Some(p), _) => {
+      println(
+        f"===============================================================> ${paires.length} resultats pour ${p.name} (${p.code
+            .getOrElse("??")})"
+      )
 
-  // println(c.length)
+      paires.foreach((ap, ru) => {
+        println(f"=> ${ap.name} (${ap.ident}) - ${ru.length} pistes")
+        ru.foreach(r => println(f"    - Piste ${r.id}"))
+      })
+
+    }
+    case (None, _) => println("Pas de match dans la BDD :(")
+
+  eval_loop(db)
+
+@main def main(): Unit =
+  val db = DatasetDB()
+  db.populate(
+    readCsv("countries.csv", Country.fromCsv),
+    readCsv("runways.csv", Runway.fromCsv),
+    readCsv("airports.csv", Airport.fromCsv)
+  )
+
+  eval_loop(db)
 
   db.close()

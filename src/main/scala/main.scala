@@ -43,10 +43,10 @@ def eval_loop(db: DatasetDB): Unit =
   )
 
   // val top5 = DBQueries.fetchTopCountries(db, 15, _.desc)
-  val surfaces = DBQueries.fetchSurfaceTypesPerCountry(db)
-  println("==========> Top 15:")
-  surfaces.foreach((c, s) => {
-    println(f"- ${c.name} | Surfaces: ${s}")
+  val lats = DBQueries.fetchMostCommonLatitudes(db, 15)
+  println("==========> Top 15 latitudes de départ les plus communes")
+  lats.foreach((lat) => {
+    println(f"- ${lat}")
   })
 
   // eval_loop(db)

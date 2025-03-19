@@ -55,7 +55,7 @@ object DBQueries {
 
     return (Some(match_country), ap_runways)
 
-    /*
+    /**
      * Recupère les pays avec le plus ou moins d'aéroports selon la condition d'ordre de classement (_.asc ou _.desc)
      */
   def fetchTopCountries(
@@ -76,8 +76,10 @@ object DBQueries {
       )
       .toList
 
-
-  //TODO: Améliorer la perf de cette fonction, 2 min pour les resultats c chaud 💀
+  // TODO: Améliorer la perf de cette fonction, 2 min pour les resultats c chaud 💀
+  /** Récupère les surfaces des pistes d'atterissages par pays
+   * WARNING: PREND DEUX BONNES MINUTES
+   */
   def fetchSurfaceTypesPerCountry(
       db: DatasetDB
   ): List[(Country, List[Option[String]])] =
@@ -97,5 +99,22 @@ object DBQueries {
       .view
       .mapValues(_.map(_._2))
       .toList
+
+  /**
+  * Récupère les n latitudes de départ les plus communes.
+  */
+  def fetchMostCommonLatitudes(
+      db: DatasetDB,
+      n_results: Int
+  ): List[Option[String]] =
+    db.executeSync(q =>
+      q.runways
+        .groupBy(_.le_ident)
+        .map((pos, g) => (pos, g.length))
+        .sortBy((pos, g) => g.desc)
+        .map((pos, g) => pos)
+        .take(n_results)
+        .result
+    ).toList
 
 }

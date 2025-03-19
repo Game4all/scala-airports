@@ -140,47 +140,47 @@ class CountryTable(tag: Tag) extends Table[Country](tag, "countries") {
 
 class RunwaysTable(tag: Tag) extends Table[Runway](tag, "runways") {
   def id = column[Int]("id", O.PrimaryKey)
-  def airportRef = column[Int]("airport_ref")
-  def airportIdent = column[String]("airport_ident")
-  def lengthFt = column[Option[Int]]("length_ft")
-  def widthFt = column[Option[Int]]("width_ft")
+  def airport_ref = column[Int]("airport_ref")
+  def airport_ident = column[String]("airport_ident")
+  def length_ft = column[Option[Int]]("length_ft")
+  def width_ft = column[Option[Int]]("width_ft")
   def surface = column[Option[String]]("surface")
   def lighted = column[Int]("lighted")
   def closed = column[Int]("closed")
-  def leIdent = column[Option[String]]("le_ident")
-  def leLatitudeDeg = column[Option[Double]]("le_latitude_deg")
-  def leLongitudeDeg = column[Option[Double]]("le_longitude_deg")
-  def leElevationFt = column[Option[Int]]("le_elevation_ft")
-  def leHeadingDegT = column[Option[Double]]("le_heading_degT")
-  def leDisplacedThresholdFt = column[Option[Int]]("le_displaced_threshold_ft")
-  def heIdent = column[Option[String]]("he_ident")
-  def heLatitudeDeg = column[Option[Double]]("he_latitude_deg")
-  def heLongitudeDeg = column[Option[Double]]("he_longitude_deg")
-  def heElevationFt = column[Option[Int]]("he_elevation_ft")
-  def heHeadingDegT = column[Option[Double]]("he_heading_degT")
-  def heDisplacedThresholdFt = column[Option[Int]]("he_displaced_threshold_ft")
+  def le_ident = column[Option[String]]("le_ident")
+  def le_latitude_deg = column[Option[Double]]("le_latitude_deg")
+  def le_longitude_deg = column[Option[Double]]("le_longitude_deg")
+  def le_elevation_ft = column[Option[Int]]("le_elevation_ft")
+  def le_heading_degT = column[Option[Double]]("le_heading_degT")
+  def le_displaced_threshold_ft = column[Option[Int]]("le_displaced_threshold_ft")
+  def he_ident = column[Option[String]]("he_ident")
+  def he_latitude_deg = column[Option[Double]]("he_latitude_deg")
+  def he_longitude_deg = column[Option[Double]]("he_longitude_deg")
+  def he_elevation_ft = column[Option[Int]]("he_elevation_ft")
+  def he_heading_degT = column[Option[Double]]("he_heading_degT")
+  def he_displaced_threshold_ft = column[Option[Int]]("he_displaced_threshold_ft")
 
   // Map columns to the case class
   def * = (
     id,
-    airportRef,
-    airportIdent,
-    lengthFt,
-    widthFt,
+    airport_ref,
+    airport_ident,
+    length_ft,
+    width_ft,
     surface,
     lighted,
     closed,
-    leIdent,
-    leLatitudeDeg,
-    leLongitudeDeg,
-    leElevationFt,
-    leHeadingDegT,
-    leDisplacedThresholdFt,
-    heIdent,
-    heLatitudeDeg,
-    heLongitudeDeg,
-    heElevationFt,
-    heHeadingDegT,
-    heDisplacedThresholdFt
+    le_ident,
+    le_latitude_deg,
+    le_longitude_deg,
+    le_elevation_ft,
+    le_heading_degT,
+    le_displaced_threshold_ft,
+    he_ident,
+    he_latitude_deg,
+    he_longitude_deg,
+    he_elevation_ft,
+    he_heading_degT,
+    he_displaced_threshold_ft
   ) <> (Runway.apply.tupled, Runway.unapply)
 }

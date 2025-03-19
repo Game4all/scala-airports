@@ -40,7 +40,7 @@ object DBQueries {
       db.executeSync(_ =>
         ap_query
           .joinLeft(db.runways)
-          .on((ap, ru) => ru.airportIdent.like(ap.ident))
+          .on((ap, ru) => ru.airport_ident.like(ap.ident))
           .sortBy((ap, ru) => ap.ident)
           .result
       ).toList

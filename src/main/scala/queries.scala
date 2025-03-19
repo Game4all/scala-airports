@@ -41,7 +41,7 @@ object DBQueries {
       db.executeSync(q =>
         ap_query(q)
           .joinLeft(q.runways)
-          .on((ap, ru) => ru.airport_ident.like(ap.ident))
+          .on((ap, ru) => ru.airport_ident === ap.ident)
           .sortBy((ap, ru) => ap.ident)
           .result
       ).toList
@@ -76,8 +76,26 @@ object DBQueries {
       )
       .toList
 
-  // def fetchSurfaceTypesPerCountry(db: DatasetDB): List[(Country, List[Option[String]])] =
 
+  //TODO: Améliorer la perf de cette fonction, 2 min pour les resultats c chaud 💀
+  def fetchSurfaceTypesPerCountry(
+      db: DatasetDB
+  ): List[(Country, List[Option[String]])] =
+    db
+      .executeSync(f =>
+        f.countries
+          .join(f.airports)
+          .on((c, a) => a.iso_country === c.code)
+          .join(f.runways)
+          .on((cu_ap, r) => r.airport_ident === cu_ap._2.ident)
+          .map((cu_ap, r) => (cu_ap._1, r.surface))
+          .distinctOn((cu, s) => (cu, s))
+          .result
+      )
+      .toList
+      .groupBy(_._1)
+      .view
+      .mapValues(_.map(_._2))
+      .toList
 
 }
- 

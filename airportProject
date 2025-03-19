@@ -20,7 +20,7 @@ FAIT = M.2.2) Query Option will ask the user for the country name or code and di
 
 M.2.3) Choosing Reports will display the following (possibly through a menu):
 OK • 10 countries with highest number of airports (with count) and countries  with lowest number of airports.
-• Type of runways (as indicated in "surface" column) per country
+OK • Type of runways (as indicated in "surface" column) per country
 • The top 10 most common runway latitude (indicated in "le_ident" column)
 
 If you get the job done (10pt) with a clean code (4pt), correct submission (1pt) you'll have up to 15/20.

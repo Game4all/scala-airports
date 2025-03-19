@@ -2,6 +2,7 @@ import scala.concurrent.Future
 import slick.lifted.Tag;
 import slick.jdbc.H2Profile.api._
 import scala.concurrent.ExecutionContext.Implicits.global
+import slick.lifted.ColumnOrdered
 
 object DBQueries {
 
@@ -28,8 +29,8 @@ object DBQueries {
       case head :: _ => head
 
     // query pour recupérer les aeroports qui matchent le code ISO pays
-    val ap_query =
-      db.airports
+    val ap_query = (q: DBTables) =>
+      q.airports
         .filter(a =>
           a.iso_country === match_country.code.getOrElse("") || a.iso_region
             .like(qUpper)
@@ -37,9 +38,9 @@ object DBQueries {
 
     // obligé de faire le groupBy hors du SQL car pour une raison obscure ca lâche une erreur
     val ap_runways =
-      db.executeSync(_ =>
-        ap_query
-          .joinLeft(db.runways)
+      db.executeSync(q =>
+        ap_query(q)
+          .joinLeft(q.runways)
           .on((ap, ru) => ru.airport_ident.like(ap.ident))
           .sortBy((ap, ru) => ap.ident)
           .result
@@ -53,4 +54,30 @@ object DBQueries {
         .toList
 
     return (Some(match_country), ap_runways)
+
+    /*
+     * Recupère les pays avec le plus ou moins d'aéroports selon la condition d'ordre de classement (_.asc ou _.desc)
+     */
+  def fetchTopCountries(
+      db: DatasetDB,
+      n_results: Int,
+      ordering: Rep[Int] => ColumnOrdered[Int]
+  ): List[(Country, Int)] =
+    db
+      .executeSync(f =>
+        f.countries
+          .join(f.airports)
+          .on((c, a) => a.iso_country === c.code)
+          .groupBy((c, a) => c)
+          .map((c, a) => (c, a.length))
+          .sortBy((c, a) => ordering(a))
+          .take(n_results)
+          .result
+      )
+      .toList
+
+  // def fetchSurfaceTypesPerCountry(db: DatasetDB): List[(Country, List[Option[String]])] =
+
+
 }
+ 

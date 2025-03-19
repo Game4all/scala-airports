@@ -18,6 +18,55 @@ class DatasetDB {
     keepAliveConnection = true
   )
 
+  private val tables = DBTables()
+
+  /** Remplit la BDD avec les collections de modèles passées en paramètres.
+    */
+  def populate(c: List[Country], r: List[Runway], a: List[Airport]): Unit =
+    Await.result(
+      Future.sequence(
+        Seq(
+          this.execute(_.airports ++= a),
+          this.execute(_.runways ++= r),
+          this.execute(_.countries ++= c)
+        )
+      ),
+      Duration(10, "s")
+    )
+
+  /** Execute la requête slick passée en paramètres
+    */
+  def execute[B](f: DBTables => DBIO[B]): Future[B] =
+    jdbc.run(f(this.tables))
+
+  /** Execute la requête slick passée en paramètres et attend le résultat.
+    */
+  def executeSync[B](f: DBTables => DBIO[B]): B =
+    Await.result(jdbc.run(f(this.tables)), Duration.Inf)
+
+  /// Initialise la BDD.
+  private def init(): Unit = {
+    Await.result(
+      Future.sequence(
+        Seq(
+          this.execute(_.airports.schema.create),
+          this.execute(_.runways.schema.create),
+          this.execute(_.countries.schema.create)
+        )
+      ),
+      Duration(10, "s")
+    )
+  }
+
+  init()
+
+  /** Ferme la connexion existante a la BDD en mémoire.
+    */
+  def close(): Unit =
+    jdbc.close()
+}
+
+class DBTables {
   /*
    * Aéroports
    */
@@ -30,46 +79,6 @@ class DatasetDB {
    * Pays
    */
   val countries: TableQuery[CountryTable] = TableQuery[CountryTable]
-
-  /** Remplit la BDD avec les collections de modèles passées en paramètres.
-    */
-  def populate(c: List[Country], r: List[Runway], a: List[Airport]): Unit =
-    Await.result(
-      Future.sequence(
-        Seq(
-          jdbc.run(airports ++= a),
-          jdbc.run(runways ++= r),
-          jdbc.run(countries ++= c)
-        )
-      ),
-      Duration(10, "s")
-    )
-
-  /** Execute la requête slick passée en paramètres
-    */
-  def execute[B](f: DatasetDB => DBIO[B]): Future[B] =
-    jdbc.run(f(this))
-
-  /** Execute la requête slick passée en paramètres et attend le résultat.
-    */
-  def executeSync[B](f: DatasetDB => DBIO[B]): B =
-    Await.result(jdbc.run(f(this)), Duration.Inf)
-
-  /// Initialise la BDD.
-  private def init(): Unit = {
-    val res1 = jdbc.run(airports.schema.create)
-    val res2 = jdbc.run(runways.schema.create)
-    val res3 = jdbc.run(countries.schema.create)
-
-    Await.result(Future.sequence(Seq(res1, res2, res3)), Duration(10, "s"))
-  }
-
-  init()
-
-  /** Ferme la connexion existante a la BDD en mémoire.
-    */
-  def close(): Unit =
-    jdbc.close()
 }
 
 // ==================================================================== Tables BDD ==============================================
@@ -152,13 +161,15 @@ class RunwaysTable(tag: Tag) extends Table[Runway](tag, "runways") {
   def le_longitude_deg = column[Option[Double]]("le_longitude_deg")
   def le_elevation_ft = column[Option[Int]]("le_elevation_ft")
   def le_heading_degT = column[Option[Double]]("le_heading_degT")
-  def le_displaced_threshold_ft = column[Option[Int]]("le_displaced_threshold_ft")
+  def le_displaced_threshold_ft =
+    column[Option[Int]]("le_displaced_threshold_ft")
   def he_ident = column[Option[String]]("he_ident")
   def he_latitude_deg = column[Option[Double]]("he_latitude_deg")
   def he_longitude_deg = column[Option[Double]]("he_longitude_deg")
   def he_elevation_ft = column[Option[Int]]("he_elevation_ft")
   def he_heading_degT = column[Option[Double]]("he_heading_degT")
-  def he_displaced_threshold_ft = column[Option[Int]]("he_displaced_threshold_ft")
+  def he_displaced_threshold_ft =
+    column[Option[Int]]("he_displaced_threshold_ft")
 
   // Map columns to the case class
   def * = (

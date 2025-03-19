@@ -7,9 +7,8 @@ import scala.annotation.tailrec
   */
 def readCsv[T](filename: String, f: List[String] => T): List[T] =
   // on lit les lignes du fichier en question
-  val lines = Source.fromFile(filename).getLines().toList
-  // on enlève le header
-  var lines_no_header = lines.tail
+  // avec un tail pour virer les entêtes de colonnes
+  val lines = Source.fromFile(filename).getLines().toList.tail
 
   @tailrec
   def read_csv_line(lines: List[String], processed: List[T]): List[T] =
@@ -22,7 +21,7 @@ def readCsv[T](filename: String, f: List[String] => T): List[T] =
         read_csv_line(tail, item :: processed)
       }
 
-  return read_csv_line(lines_no_header, Nil)
+  return read_csv_line(lines, Nil)
 
 /** Parse une ligne du CSV en prenant en compte ces vicieuses chaines de
   * caractères échappées avec des guillements.

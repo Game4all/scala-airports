@@ -42,6 +42,13 @@ def eval_loop(db: DatasetDB): Unit =
     readCsv("airports.csv", Airport.fromCsv)
   )
 
-  eval_loop(db)
+  val top5 = DBQueries.fetchTopCountries(db, 15, _.desc)
+
+  println("==========> Top 15:")
+  top5.foreach((c, l) => {
+    println(f"- ${c.name} : ${l} aeroports")
+  })
+
+  // eval_loop(db)
 
   db.close()

@@ -33,11 +33,6 @@ lazy val root = project
         (Compile / dependencyClasspath).value
           .map(_.data)
           .filter(_.getName.startsWith("javafx-"))
-          .map(d => {
-            val p = d.toPath().getParent()
-            println(p)
-            d
-          })
           .mkString(";"),
         "--add-modules",
         "javafx.graphics,javafx.controls,javafx.fxml"

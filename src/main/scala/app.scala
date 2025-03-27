@@ -13,8 +13,14 @@ import javafx.scene.Node
 import scalafx.scene.layout.Priority
 import scalafx.scene.layout.Region
 import scalafx.scene.input.KeyCode.I
+import scalafx.scene.control.ProgressIndicator
+import scalafx.animation.FadeTransition
+import scalafx.util.Duration
 
-class AppScene(title: Label, content: Node) extends Scene(1200, 800) {
+private val appWidth = 1200
+private val appHeight = 800
+
+class AppScene(title: Label, content: Node) extends Scene(appWidth, appHeight) {
   val rootPane = new StackPane()
   root = rootPane
 
@@ -53,5 +59,54 @@ class AppScene(title: Label, content: Node) extends Scene(1200, 800) {
   def adjustBackgroundSize(): Unit = {
     backgroundView.fitWidth = this.getWidth
     backgroundView.fitHeight = this.getHeight
+  }
+}
+
+class LoadingScene extends Scene(appWidth, appHeight) {
+  private val rootPane = new StackPane()
+  root = rootPane
+
+  // Background image
+  private val backgroundImage = new Image(getClass.getResource("/airplane-image.jpg").toExternalForm)
+  private val backgroundView = new ImageView(backgroundImage) {
+    preserveRatio = false
+  }
+
+  private val waitingLabel = new Label("Loading...") {
+    font = new Font("Arial", 24)
+    style = "-fx-text-fill: white; -fx-font-weight: bold;"
+  }
+
+  private val fadeAnimation = new FadeTransition(Duration(1200), waitingLabel) {
+    fromValue = 1.0
+    toValue = 0.3
+    cycleCount = FadeTransition.Indefinite
+    autoReverse = true
+  }
+  fadeAnimation.play()
+
+  private val progressIndicator = new ProgressIndicator {
+    style = "-fx-progress-color: blue;"
+    prefWidth = 80
+    prefHeight = 80
+  }
+
+  private val waitingBox = new VBox(20, waitingLabel, progressIndicator) {
+    alignment = Pos.CENTER
+    padding = Insets(20)
+    style = "-fx-background-color: rgba(0, 0, 0, 0.5); -fx-background-radius: 10;"
+  }
+
+  private val mainContainer = new StackPane() {
+    children.addAll(backgroundView, waitingBox)
+  }
+
+  rootPane.children.add(mainContainer)
+  width.onChange((_, _, newWidth) => adjustBackgroundSize())
+  height.onChange((_, _, newHeight) => adjustBackgroundSize())
+
+  private def adjustBackgroundSize(): Unit = {
+    backgroundView.fitWidth = width()
+    backgroundView.fitHeight = height()
   }
 }

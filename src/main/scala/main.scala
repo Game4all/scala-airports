@@ -24,10 +24,13 @@ object AirportApp extends JFXApp3 {
 
   def initDB(): Unit = {
     db = DatasetDB()
+    val airportsFile = "airports.csv"
+    val runwaysFile = "runways.csv"
+    val countriesFile = "countries.csv"
     db.populate(
-      readCsv("countries.csv", Country.fromCsv),
-      readCsv("runways.csv", Runway.fromCsv),
-      readCsv("airports.csv", Airport.fromCsv)
+      readCsv(countriesFile, Country.fromCsv),
+      readCsv(runwaysFile, Runway.fromCsv),
+      readCsv(airportsFile, Airport.fromCsv)
     )
   }
 
@@ -46,6 +49,54 @@ object AirportApp extends JFXApp3 {
     }
 
     this.homeScene = stage.scene.value
+  }
+
+  def backToHome(): Unit = {
+    stage.scene = if (homeScene != null) homeScene else createHomeScene()
+    stage.fullScreen = true
+  }
+
+  def handleQueryForm(countryList: ObservableBuffer[String], selectedCodeCountry: String): Unit = {
+      if (selectedCodeCountry.nonEmpty && countryList.contains(selectedCodeCountry)) {
+        val selectedCountry = selectedCodeCountry.split(" - ")(1).trim
+        stage.scene = new LoadingScene()
+        stage.fullScreen = true
+
+        Future {
+          if (!cacheAirportData.contains(selectedCountry)) {
+            val (_, airports) = DBQueries.fetchCountryAirportsRunways(db, selectedCountry)
+            cacheAirportData(selectedCountry) = airports
+          }
+          javafx.application.Platform.runLater(() => 
+            stage.scene = createCountryScene(selectedCountry, cacheAirportData(selectedCountry))
+            stage.fullScreen = true
+          )
+        }
+      }
+      else {
+        if (selectedCodeCountry.isEmpty) {
+          val alert = new Alert(Alert.AlertType.Warning) {
+            title = "Warning"
+            headerText = "Empty search field"
+            contentText = "Please enter a country code or name to search for."
+          }
+          alert.showAndWait()
+        }
+        else {
+          val alert = new Alert(Alert.AlertType.Warning) {
+            title = "Warning"
+            headerText = "Country not found"
+            contentText = "Please enter a valid country code or name to search for."
+          }
+          alert.showAndWait()
+        }
+      }
+    }
+
+  def hanfleCountryDropdown(countryDropdown: ListView[String], searchField: TextField): Unit = {
+    val selected = countryDropdown.selectionModel().getSelectedItem
+    if (selected != null) searchField.text = selected
+    countryDropdown.visible = false
   }
 
   def createHomeScene(): AppScene = {
@@ -99,69 +150,10 @@ object AirportApp extends JFXApp3 {
     }
 
     // Country Dropdown Selection
-    countryDropdown.onMouseClicked = _ => {
-      val selected = countryDropdown.selectionModel().getSelectedItem
-      if (selected != null) searchField.text = selected
-      countryDropdown.visible = false
-    }
+    countryDropdown.onMouseClicked = _ => hanfleCountryDropdown(countryDropdown, searchField)
 
     // Query Button Action
-    queryButton.onAction = _ => {
-      val selectedCodeCountry = searchField.text.value
-      if (selectedCodeCountry.nonEmpty && countryList.contains(selectedCodeCountry)) {
-        // full screen loading scene
-        val selectedCountry = selectedCodeCountry.split(" - ")(1).trim
-        stage.scene = new Scene(1200, 800) {
-          val waitingLabel = new Label("Loading...") {
-            font = new Font("Arial", 24)
-            style = "-fx-fill: white; -fx-font-weight: bold;"
-          }
-
-          val progressIndicator = new ProgressIndicator {
-            style = "-fx-progress-color: blue;"
-            prefWidth = 80
-            prefHeight = 80
-          }
-
-          val waitingBox = new VBox(20, waitingLabel, progressIndicator) {
-            alignment = Pos.CENTER
-            style = "-fx-background-color: rgba(0, 0, 0, 0.5);"
-          }
-
-          root = waitingBox
-        }
-        stage.fullScreen = true
-
-        Future {
-          if (!cacheAirportData.contains(selectedCountry)) {
-            val (_, airports) = DBQueries.fetchCountryAirportsRunways(db, selectedCountry)
-            cacheAirportData(selectedCountry) = airports
-          }
-          javafx.application.Platform.runLater(() => 
-            stage.scene = createCountryScene(selectedCountry, cacheAirportData(selectedCountry))
-            stage.fullScreen = true
-          )
-        }
-      }
-      else {
-        if (selectedCodeCountry.isEmpty) {
-          val alert = new Alert(Alert.AlertType.Warning) {
-            title = "Warning"
-            headerText = "Empty search field"
-            contentText = "Please enter a country code or name to search for."
-          }
-          alert.showAndWait()
-        }
-        else {
-          val alert = new Alert(Alert.AlertType.Warning) {
-            title = "Warning"
-            headerText = "Country not found"
-            contentText = "Please enter a valid country code or name to search for."
-          }
-          alert.showAndWait()
-        }
-      }
-    }
+    queryButton.onAction = _ => handleQueryForm(countryList, searchField.text.value)
 
     // Search Dropdown Box
     val searchDropdownBox = new VBox(5, searchBox, countryDropdown) {
@@ -191,7 +183,20 @@ object AirportApp extends JFXApp3 {
     val reportsButton = new Button("📊 Reports") {
       font = new Font("Arial", 18)
       style = "-fx-background-color:rgb(123, 168, 134); -fx-text-fill: white;"
-      onAction = _ => generateReports(db)
+      onAction = _ => {
+        stage.scene = new LoadingScene()
+        stage.fullScreen = true
+
+        Future {
+          val topCountries = DBQueries.fetchTopCountries(db, 10, (col: slick.lifted.Rep[Int]) => slick.lifted.ColumnOrdered(col, slick.ast.Ordering(slick.ast.Ordering.Desc)))
+          val topLattitude = DBQueries.fetchMostCommonLatitudes(db, 10)
+
+          javafx.application.Platform.runLater(() => 
+            stage.scene = createRapportScene(topCountries, topLattitude)
+            stage.fullScreen = true
+          )
+        }
+      }
     }
     val insightsContainer = new VBox(15, insightsLabel, insightsText, reportsButton) {
       alignment = Pos.TOP_CENTER
@@ -215,6 +220,40 @@ object AirportApp extends JFXApp3 {
     new AppScene(homeTitle, sectionsBox)
   }
 
+
+  def handleAirportListView(airportListView: ListView[String], airportDetails: TextArea, runwayList: ListView[String], runwayDetails: TextArea, airports: List[(Airport, List[Runway])]): Unit = {
+    airportListView.selectionModel().selectedItem.onChange { (_, _, newAirport) =>
+    if (newAirport != null) {
+        val airport = airports.find { case (a, _) => a.name == newAirport }.get._1
+        val runways = airports.collectFirst {
+          case (airport, runways) if airport.name == newAirport => runways
+        }.getOrElse(Nil)
+
+        val airportSummary = airport.summary
+        airportDetails.text = if (airportSummary.isEmpty) "No details available or airport selected" else s"$airportSummary"
+
+        // clear runway details
+        runwayDetails.text = "No runway selected"
+        if (runways.nonEmpty) runwayList.items = ObservableBuffer(runways.map(_.toString)*)
+        else runwayList.items = ObservableBuffer("No runway available")
+      }
+    }
+  }
+
+  def handleRunwayListView(runwayListView: ListView[String], runwayDetails: TextArea, airports: List[(Airport, List[Runway])]): Unit = {
+    runwayListView.selectionModel().selectedItem.onChange { (_, _, newRunway) =>
+      if (newRunway != null) {
+        val runway = airports
+          .flatMap { case (_, runways) => runways }
+          .find(_.toString == newRunway)
+          .get
+
+        val runwaySummary = runway.summary
+        runwayDetails.text = s"$runwaySummary"
+      }
+    }
+  }
+
   def createCountryScene(selectedCountry: String, airports: List[(Airport, List[Runway])]): AppScene = {
     val rootPane = new StackPane()
 
@@ -228,14 +267,14 @@ object AirportApp extends JFXApp3 {
       style = """
         -fx-font-size: 18px;
         -fx-background-radius: 15px;
-        -fx-background-color: #87CEEB;  /* Light Sky Blue */
-        -fx-border-color: #4682B4;  /* Steel Blue */
+        -fx-background-color: #87CEEB;
+        -fx-border-color: #4682B4;
         -fx-border-width: 2px;
         -fx-border-radius: 15px;
         -fx-text-fill: white;
         -fx-font-weight: bold;
         -fx-padding: 10px;
-        -fx-selection-bar: #00BFFF;  /* Deep Sky Blue */
+        -fx-selection-bar: #00BFFF;
       """
       maxHeight = 350
       prefWidth = 400
@@ -254,14 +293,14 @@ object AirportApp extends JFXApp3 {
       style = """
         -fx-font-size: 18px;
         -fx-background-radius: 15px;
-        -fx-background-color: #87CEEB;  /* Light Sky Blue */
-        -fx-border-color: #4682B4;  /* Steel Blue */
+        -fx-background-color: #87CEEB;
+        -fx-border-color: #4682B4;
         -fx-border-width: 2px;
         -fx-border-radius: 15px;
         -fx-text-fill: white;
         -fx-font-weight: bold;
         -fx-padding: 10px;
-        -fx-selection-bar: #00BFFF;  /* Deep Sky Blue */
+        -fx-selection-bar: #00BFFF;
       """
       maxHeight = 350
       prefWidth = 400
@@ -343,34 +382,8 @@ object AirportApp extends JFXApp3 {
       """
     }
 
-    airportListView.selectionModel().selectedItem.onChange { (_, _, newAirport) =>
-      if (newAirport != null) {
-        val airport = airports.find { case (a, _) => a.name == newAirport }.get._1
-        val runways = airports.collectFirst {
-          case (airport, runways) if airport.name == newAirport => runways
-        }.getOrElse(Nil)
-
-        val airportSummary = airport.summary
-        airportDetails.text = if (airportSummary.isEmpty) "No details available or airport selected" else s"$airportSummary"
-
-        // clear runway details
-        runwayDetails.text = "No runway selected"
-        if (runways.nonEmpty) runwayList.items = ObservableBuffer(runways.map(_.toString)*)
-        else runwayList.items = ObservableBuffer("No runway available")
-      }
-    }
-
-    runwayList.selectionModel().selectedItem.onChange { (_, _, newRunway) =>
-      if (newRunway != null) {
-        val runway = airports
-          .flatMap { case (_, runways) => runways }
-          .find(_.toString == newRunway)
-          .get
-
-        val runwaySummary = runway.summary
-        runwayDetails.text = s"$runwaySummary"
-      }
-    }
+    handleAirportListView(airportListView, airportDetails, runwayList, runwayDetails, airports)
+    handleRunwayListView(runwayList, runwayDetails, airports)
 
     val backButton = new Button("⬅ Back") {
       font = new Font("Arial", 18)
@@ -381,10 +394,7 @@ object AirportApp extends JFXApp3 {
         -fx-padding: 10px 20px;
         -fx-background-radius: 10px;
       """
-      onAction = _ => {
-        stage.scene = if (homeScene != null) homeScene else createHomeScene()
-        stage.fullScreen = true
-      }
+      onAction = _ => backToHome()
     }
 
     val leftPane = new VBox(15, airportLabel, airportListView, airportDetailsPane) {
@@ -428,7 +438,6 @@ object AirportApp extends JFXApp3 {
       alignment = Pos.CENTER
     }
 
-    // Title label for the scene
     val title = new Label(s"Airports in ${selectedCountry.toUpperCase()}") {
       font = new Font("Arial", 50)
       style = "-fx-text-fill: white; -fx-font-weight: bold;"
@@ -438,16 +447,92 @@ object AirportApp extends JFXApp3 {
     new AppScene(title, mainLayout)
   }
 
-  // Function to generate the reports
-  def generateReports(db: DatasetDB): Unit = {
-    // TODO: Implement the reports generation pdf
-    val topCountries = DBQueries.fetchTopCountries(db, 10, (col: slick.lifted.Rep[Int]) => slick.lifted.ColumnOrdered(col, slick.ast.Ordering(slick.ast.Ordering.Desc)))
-    // val surfaceTypes = DBQueries.fetchSurfaceTypesPerCountry(db)
-    // val commonLatitudes = DBQueries.fetchMostCommonLatitudes(db, 10)
+  def createRapportScene(
+    topCountries: List[(Country, Int)], 
+    // countrySurface: List[(Country, List[Option[String]])], 
+    topLatitude: List[Option[String]]
+  ): AppScene = {
+    
+    val dateToday = java.time.LocalDate.now().toString
+    val title = new Label(f"Reports of All Airports, updated on $dateToday") {
+      font = new Font("Arial", 36)
+      style = "-fx-text-fill: white; -fx-font-weight: bold;"
+    }
+    
+    val topCountriesTitle = new Label("🏆 Top 10 Countries by Airports") {
+      font = new Font("Arial", 24)
+      style = "-fx-text-fill: black; -fx-font-weight: bold;"
+    }
+    
+    val topCountriesList = new VBox(
+      topCountries.map { case (country, count) => 
+        new Label(s"${country.name}: $count airports") {
+          font = new Font("Arial", 18)
+          style = "-fx-text-fill: black;"
+        }
+      }*
+    )
 
-    println("Top 10 countries with highest/lowest airports: " + topCountries)
-    // println("Runway surface types per country: " + surfaceTypes)
-    // println("Most common runway latitudes: " + commonLatitudes)
+    val topCountriesContainer = new VBox(10, topCountriesTitle, topCountriesList) {
+      padding = Insets(10)
+      alignment = Pos.CENTER
+      style = """-fx-background-color: #87CEEB;
+                -fx-border-radius: 10px;
+                -fx-background-radius: 10px;"""
+    }
+
+    val separator = new Separator()
+
+    val latitudeTitle = new Label("📍 Top 10 Common Runway Latitudes") {
+      font = new Font("Arial", 24)
+      style = "-fx-text-fill: black; -fx-font-weight: bold;"
+    }
+
+    val latitudeList = new VBox(
+      topLatitude.flatten.map(lat =>
+        val latRank = topLatitude.flatten.indexOf(lat) + 1
+        val textLat = if (lat.contains("H")) lat + " (Helipad)" else lat + "°"
+        new Label(s"Rank $latRank: $textLat") {
+          font = new Font("Arial", 18)
+          style = "-fx-text-fill: black;"
+        }
+      )*
+    )
+
+    val latitudeContainer = new VBox(10, latitudeTitle, latitudeList) {
+      padding = Insets(10)
+      alignment = Pos.CENTER
+      style = "-fx-background-color: #4682B4; -fx-border-radius: 10px; -fx-background-radius: 10px;"
+    }
+
+    val leftContainer = new VBox(20, topCountriesContainer, separator, latitudeContainer) {
+      padding = Insets(20)
+      alignment = Pos.TOP_CENTER
+    }
+
+    
+    val searchField = new TextField() {
+      promptText = "🔍 Search country..."
+      style = "-fx-font-size: 16px;"
+    }
+
+    val placeholderLabel = new Label("Results will appear here...") {
+      font = new Font("Arial", 20)
+      style = "-fx-text-fill: gray; -fx-font-style: italic;"
+    }
+
+    val rightContainer = new VBox(10, searchField, placeholderLabel) {
+      padding = Insets(20)
+      alignment = Pos.TOP_CENTER
+      style = "-fx-background-color: #f4f4f4; -fx-padding: 20px; -fx-border-radius: 10px; -fx-background-radius: 10px;"
+    }
+
+    val mainContainer = new HBox(40, leftContainer, rightContainer) {
+      padding = Insets(20)
+      alignment = Pos.CENTER
+    }
+
+    new AppScene(title, mainContainer)
   }
 
 

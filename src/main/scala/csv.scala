@@ -8,7 +8,7 @@ import scala.annotation.tailrec
 def readCsv[T](filename: String, f: List[String] => T): List[T] =
   // on lit les lignes du fichier en question
   // avec un tail pour virer les entêtes de colonnes
-  val lines = Source.fromFile(filename).getLines().toList.tail
+  val lines = Source.fromFile(filename, "UTF-8").getLines().toList.tail
 
   @tailrec
   def read_csv_line(lines: List[String], processed: List[T]): List[T] =

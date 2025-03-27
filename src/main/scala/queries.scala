@@ -117,4 +117,15 @@ object DBQueries {
         .result
     ).toList
 
+
+  /**
+   * Récupère les paires code pays - nom pays pour le dropdown
+   */
+  def fetchCountryDropdown(db: DatasetDB): List[(String, String)] =
+    db.executeSync(
+      _.countries.map(c => (c.code, c.name)).result)
+      .collect { case (Some(code), name) => (code, name) }
+      .sorted
+      .toList
+
 }

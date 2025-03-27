@@ -30,7 +30,24 @@ case class Airport(
     home_link: Option[String],
     wikipedia_link: Option[String],
     keywords: Option[String]
-)
+) {
+  override def toString: String = s"$name ($ident)"
+
+  def summary: (String) = {
+    val key = this.toString
+    val airportType = this.`type`
+    val elevation = elevation_ft.map(e => s"$e ft").getOrElse("Unknown")
+    val country = iso_country.getOrElse("N/A")
+    val city = municipality.getOrElse("Unknown city")
+
+    s"""|Name: $key
+        |Type: $airportType
+        |Elevation: $elevation
+        |Location: $city, $country
+        |GPS Location: (${f"$latitude_deg%.2f"}°, ${f"$longitude_deg%.2f"}°)
+    """.stripMargin
+  }
+}
 
 object Airport {
   def fromCsv(line: List[String]): Airport = {
@@ -107,7 +124,27 @@ case class Runway(
     he_elevation_ft: Option[Int],
     he_heading_degT: Option[Double],
     he_displaced_threshold_ft: Option[Int]
-)
+) {
+  override def toString: String = s"Runway ${id} - ${airport_ident}"
+
+  def summary: String = {
+    val key = this.toString
+    val length = length_ft.map(l => s"$l ft").getOrElse("Unknown length")
+    val width = width_ft.map(w => s"$w ft").getOrElse("Unknown width")
+    val surfaceType = surface.getOrElse("Unknown surface")
+    val lighting = if (lighted == 1) "Yes" else "No"
+    val closedStatus = if (closed == 1) "Closed" else "Open"
+    val leIdent = le_ident.getOrElse("N/A")
+
+    s"""|Name: $key
+        |Length: $length, Width: $width
+        |Surface: $surfaceType
+        |Lighted: $lighting
+        |Status: $closedStatus
+        |Runway latitude: $leIdent
+    """.stripMargin
+  }
+}
 
 object Runway {
   def fromCsv(line: List[String]): Runway = {

@@ -39,11 +39,6 @@ class DatasetDB {
   def execute[B](f: DBTables => DBIO[B]): Future[B] =
     jdbc.run(f(this.tables))
 
-  /** Execute la requête slick passée en paramètres et attend le résultat.
-    */
-  def executeSync[B](f: DBTables => DBIO[B]): B =
-    Await.result(jdbc.run(f(this.tables)), Duration.Inf)
-
   /// Initialise la BDD.
   private def init(): Unit = {
     Await.result(

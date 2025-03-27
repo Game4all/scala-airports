@@ -66,6 +66,9 @@ class DatasetDB {
     jdbc.close()
 }
 
+/**
+ * Liste les tables de la BDD
+ **/
 class DBTables {
   /*
    * Aéroports

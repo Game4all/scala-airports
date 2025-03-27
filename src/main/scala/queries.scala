@@ -12,59 +12,74 @@ object DBQueries {
   def fetchCountryAirportsRunways(
       db: DatasetDB,
       query: String
-  ): (Option[Country], List[(Airport, List[Runway])]) =
+  ): Future[(Option[Country], List[(Airport, List[Runway])])] = {
     // la query en MAJ si jamais il s'agit d'un code pays ISO
     val qUpper = query.toUpperCase()
 
-    // on return du vide si on a rien
-    val match_country: Country = db
-      .executeSync(
-        _.countries
+    // un pays matchant le début de nom ou le CODE ISO spécifié.
+    val match_country: Future[Option[Country]] = db
+      .execute { q =>
+        q.countries
           .filter(c => c.code === Some(qUpper) || c.name.like(f"%%$query%s%%"))
           .take(1)
           .result
-      )
-      .toList match
-      case Nil       => return (None, Nil)
-      case head :: _ => head
+      }
+      .map(_.headOption)
 
-    // query pour recupérer les aeroports qui matchent le code ISO pays
-    val ap_query = (q: DBTables) =>
-      q.airports
-        .filter(a =>
-          a.iso_country === match_country.code.getOrElse("") || a.iso_region
-            .like(qUpper)
-        )
+    match_country
+      .flatMap(matchCountry => {
+        matchCountry match
+          case None => Future.successful((None, Nil))
 
-    // obligé de faire le groupBy hors du SQL car pour une raison obscure ca lâche une erreur
-    val ap_runways =
-      db.executeSync(q =>
-        ap_query(q)
-          .joinLeft(q.runways)
-          .on((ap, ru) => ru.airport_ident === ap.ident)
-          .sortBy((ap, ru) => ap.ident)
-          .result
-      ).toList
-        .groupBy(_._1)
-        .view
-        .mapValues { values =>
-          values.collect { case (_, Some(b)) => b }
-        }
-        .toMap
-        .toList
+          case Some(matchCountry) =>
+            // aeroports qui matchent le code pays
+            val ap_query = (q: DBTables) =>
+              q.airports
+                .filter(a =>
+                  a.iso_country === matchCountry.code.getOrElse(
+                    ""
+                  ) || a.iso_region
+                    .like(qUpper)
+                )
 
-    return (Some(match_country), ap_runways)
+            // jointure aeroport x voies associees
+            val ap_runways: Future[List[(Airport, List[Runway])]] = db
+              .execute { q =>
+                ap_query(q)
+                  .joinLeft(q.runways)
+                  .on((ap, ru) => ru.airport_ident === ap.ident)
+                  .sortBy((ap, ru) => ap.ident)
+                  .result
+              }
+              .map(
+                apRunways =>
+                  { // aggregation hors requête, peut être regarder pour le faire dans le SQL
+                    apRunways.toList
+                      .groupBy(_._1)
+                      .view
+                      .mapValues { values =>
+                        values.collect { case (_, Some(b)) => b }
+                      }
+                      .toMap
+                      .toList
+                  }
+              )
 
-    /**
-     * Recupère les pays avec le plus ou moins d'aéroports selon la condition d'ordre de classement (_.asc ou _.desc)
-     */
+            // le resultat final
+            ap_runways.map((Some(matchCountry), _))
+      })
+  }
+
+  /** Recupère les pays avec le plus ou moins d'aéroports selon la condition
+    * d'ordre de classement (_.asc ou _.desc)
+    */
   def fetchTopCountries(
       db: DatasetDB,
       n_results: Int,
       ordering: Rep[Int] => ColumnOrdered[Int]
-  ): List[(Country, Int)] =
+  ): Future[List[(Country, Int)]] =
     db
-      .executeSync(f =>
+      .execute(f =>
         f.countries
           .join(f.airports)
           .on((c, a) => a.iso_country === c.code)
@@ -74,17 +89,17 @@ object DBQueries {
           .take(n_results)
           .result
       )
-      .toList
+      .map(_.toList)
 
   // TODO: Améliorer la perf de cette fonction, 2 min pour les resultats c chaud 💀
-  /** Récupère les surfaces des pistes d'atterissages par pays
-   * WARNING: PREND DEUX BONNES MINUTES
-   */
+  /** Récupère les surfaces des pistes d'atterissages par pays WARNING: PREND
+    * DEUX BONNES MINUTES
+    */
   def fetchSurfaceTypesPerCountry(
       db: DatasetDB
-  ): List[(Country, List[Option[String]])] =
+  ): Future[List[(Country, List[Option[String]])]] =
     db
-      .executeSync(f =>
+      .execute(f =>
         f.countries
           .join(f.airports)
           .on((c, a) => a.iso_country === c.code)
@@ -94,20 +109,21 @@ object DBQueries {
           .distinctOn((cu, s) => (cu, s))
           .result
       )
-      .toList
-      .groupBy(_._1)
-      .view
-      .mapValues(_.map(_._2))
-      .toList
+      .map(
+        _.toList
+          .groupBy(_._1)
+          .view
+          .mapValues(_.map(_._2))
+          .toList
+      )
 
-  /**
-  * Récupère les n latitudes de départ les plus communes.
-  */
+  /** Récupère les n latitudes de départ les plus communes.
+    */
   def fetchMostCommonLatitudes(
       db: DatasetDB,
       n_results: Int
-  ): List[Option[String]] =
-    db.executeSync(q =>
+  ): Future[List[Option[String]]] =
+    db.execute(q =>
       q.runways
         .groupBy(_.le_ident)
         .map((pos, g) => (pos, g.length))
@@ -115,7 +131,7 @@ object DBQueries {
         .map((pos, g) => pos)
         .take(n_results)
         .result
-    ).toList
+    ).map(_.toList)
 
 
   /**

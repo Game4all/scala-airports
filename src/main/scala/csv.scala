@@ -13,7 +13,7 @@ def readCsv[T](filename: String, f: List[String] => T): List[T] =
   @tailrec
   def read_csv_line(lines: List[String], processed: List[T]): List[T] =
     lines match
-      case Nil => return processed.reverse
+      case Nil => processed.reverse
       case head :: tail => {
         val values = readCsvLine(head.toList, ',', Nil, Nil, false)
         // val values = head.split(",").toList
@@ -21,11 +21,11 @@ def readCsv[T](filename: String, f: List[String] => T): List[T] =
         read_csv_line(tail, item :: processed)
       }
 
-  return read_csv_line(lines, Nil)
+  read_csv_line(lines, Nil)
 
 /** Parse une ligne du CSV en prenant en compte ces vicieuses chaines de
-  * caractères échappées avec des guillements.
-  * Les regex c plus simple mais va m'écrire ca sans chat...
+  * caractères échappées avec des guillements. Les regex c plus simple mais va
+  * m'écrire ca sans chat...
   */
 @tailrec
 def readCsvLine(
@@ -36,7 +36,7 @@ def readCsvLine(
     in_str: Boolean
 ): List[String] =
   line match
-    case Nil => return (curr_item.mkString :: splits).reverse
+    case Nil => (curr_item.mkString :: splits).reverse
     case head :: tail => {
       if (head == '"') {
         readCsvLine(tail, sep, splits, curr_item, !in_str)

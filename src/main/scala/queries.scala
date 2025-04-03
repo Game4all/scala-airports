@@ -25,7 +25,7 @@ object DBQueries {
           .result
       )
       .toList match
-      case Nil       => return (None, Nil)
+      case Nil       => return (None, Nil) // return pour early return de la fonction
       case head :: _ => head
 
     // query pour recupérer les aeroports qui matchent le code ISO pays
@@ -53,7 +53,7 @@ object DBQueries {
         .toMap
         .toList
 
-    return (Some(match_country), ap_runways)
+    (Some(match_country), ap_runways)
 
     /**
      * Recupère les pays avec le plus ou moins d'aéroports selon la condition d'ordre de classement (_.asc ou _.desc)

@@ -1,11 +1,22 @@
-## sbt project compiled with Scala 3
+## Projet Functionnal Programming Scala
 
-### Usage
 
-This is a normal sbt project. You can compile code with `sbt compile`, run it with `sbt run`, and `sbt console` will start a Scala 3 REPL.
+### Feature list
+- [x] Parsing des fichiers CSV
+- [x] Case classes pour les 3 modèles
+- [x] Recherche des pistes + infos depuis nom pays / code pays
+- [x] Queries du mode rapport
+**Bonus**
+- [x] GUI avec JavaFX
+- [x] Fuzzy matching (fait dans l'UI + dans le code requête)
+- [x] BDD SQL avec H2 + slick
+- [ ] Utiliser Futures pour la BDD      
 
-For more information on the sbt-dotty plugin, see the
-[scala3-example-project](https://github.com/scala/scala3-example-project/blob/main/README.md).
+### Explication de la structure de fichiers
 
-For running ScalaFx on this project, please make sure you have JavaFX installed on your system. You can download it from [here](https://gluonhq.com/products/javafx/). And replace the javaOptions "--module-path" in the build.sbt file with the path to your JavaFX lib folder.
-Also, you need to have Java 17+ installed on your system.
+- `src/scala`
+    - `csv.scala` : Logique de parsing du CSV
+    - `database.scala` : Logique de la BDD SQL H2 + def des tables pour bonus BDD
+    - `models.scala` : Modèles (Aéroport, Piste et Pays + companion objects)
+    - `queries.scala` : Code des requêtes demandées en SQL avec slick
+    - `app.scala` : Interface utilisateur (GUI) bonus interface.

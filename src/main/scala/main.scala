@@ -27,6 +27,7 @@ object AirportApp extends JFXApp3 {
     val airportsFile = "airports.csv"
     val runwaysFile = "runways.csv"
     val countriesFile = "countries.csv"
+
     db.populate(
       readCsv(countriesFile, Country.fromCsv),
       readCsv(runwaysFile, Runway.fromCsv),
@@ -189,10 +190,13 @@ object AirportApp extends JFXApp3 {
 
         Future {
           val topCountries = DBQueries.fetchTopCountries(db, 10, (col: slick.lifted.Rep[Int]) => slick.lifted.ColumnOrdered(col, slick.ast.Ordering(slick.ast.Ordering.Desc)))
+          val countrySurface = DBQueries.fetchSurfaceTypesPerCountry(db)
+          // order by country name
+          val countrySurfaceSorted = countrySurface.sortBy(_._1.name)          
           val topLattitude = DBQueries.fetchMostCommonLatitudes(db, 10)
 
           javafx.application.Platform.runLater(() => 
-            stage.scene = createRapportScene(topCountries, topLattitude)
+            stage.scene = createRapportScene(topCountries, countrySurfaceSorted, topLattitude)
             stage.fullScreen = true
           )
         }
@@ -262,7 +266,7 @@ object AirportApp extends JFXApp3 {
       font = new Font("Arial", 24)
       style = "-fx-text-fill: white; -fx-font-weight: bold;"
     }
-    val airportList = ObservableBuffer(airports.map(_._1.name).filter(_.nonEmpty)*)
+    val airportList = ObservableBuffer(airports.map(_._1.name).filter(_.nonEmpty)*).sortInPlace()
     val airportListView = new ListView[String](airportList) {
       style = """
         -fx-font-size: 18px;
@@ -449,7 +453,7 @@ object AirportApp extends JFXApp3 {
 
   def createRapportScene(
     topCountries: List[(Country, Int)], 
-    // countrySurface: List[(Country, List[Option[String]])], 
+    countrySurface: List[(Country, List[Option[String]])], 
     topLatitude: List[Option[String]]
   ): AppScene = {
     
@@ -510,29 +514,81 @@ object AirportApp extends JFXApp3 {
       alignment = Pos.TOP_CENTER
     }
 
-    
-    val searchField = new TextField() {
-      promptText = "🔍 Search country..."
-      style = "-fx-font-size: 16px;"
+
+    val surfaceTitle = new Label("🌍 Runway Surface Types per Country") {
+      font = new Font("Arial", 24)
+      style = "-fx-text-fill: black; -fx-font-weight: bold;"
     }
 
-    val placeholderLabel = new Label("Results will appear here...") {
-      font = new Font("Arial", 20)
-      style = "-fx-text-fill: gray; -fx-font-style: italic;"
+    val countriesSurface = countrySurface.map { case (country, surfaces) =>
+      val surfaceTypes = surfaces.flatten.distinct.mkString(", ")
+      s"${country.name}: $surfaceTypes"
     }
 
-    val rightContainer = new VBox(10, searchField, placeholderLabel) {
+    // Create a listview for the country surface types that we can scroll
+    val countrySurfaceList = new ListView[String](ObservableBuffer(countriesSurface*)) {
+      style = """
+        -fx-font-size: 18px;
+        -fx-background-radius: 15px;
+        -fx-background-color: #87CEEB;
+        -fx-border-color: #4682B4;
+        -fx-border-width: 2px;
+        -fx-border-radius: 15px;
+        -fx-text-fill: black;
+        -fx-font-weight: bold;
+        -fx-padding: 10px;
+        -fx-selection-bar: #00BFFF;
+      """
+      maxHeight = 350
+      prefWidth = 400
+      maxWidth = 400
+    }
+    countrySurfaceList.setFixedCellSize(40)
+    countrySurfaceList.setPrefHeight(10 * countrySurfaceList.getFixedCellSize + 2)
+
+    countrySurfaceList.visible = true
+    countrySurfaceList.managed = true
+
+    val rightContainer = new VBox(10, surfaceTitle, countrySurfaceList) {
       padding = Insets(20)
-      alignment = Pos.TOP_CENTER
-      style = "-fx-background-color: #f4f4f4; -fx-padding: 20px; -fx-border-radius: 10px; -fx-background-radius: 10px;"
+      alignment = Pos.CENTER // Centre les éléments à l'intérieur du conteneur
+      style = """
+        -fx-background-color: #4682B4; /* Bleu */
+        -fx-padding: 20px;
+        -fx-border-radius: 10px;
+        -fx-background-radius: 10px;
+        -fx-text-fill: white;
+      """
+      maxWidth = 450
+      prefWidth = 450
+      maxHeight = 550
+      prefHeight = 550
     }
 
+    HBox.setHgrow(rightContainer, Priority.NEVER)
     val mainContainer = new HBox(40, leftContainer, rightContainer) {
       padding = Insets(20)
       alignment = Pos.CENTER
     }
 
-    new AppScene(title, mainContainer)
+    // Create the back button
+    val backButton = new Button("⬅ Back") {
+      font = new Font("Arial", 18)
+      style = """
+        -fx-background-color: #ff5555; 
+        -fx-text-fill: white;
+        -fx-font-weight: bold;
+        -fx-padding: 10px 20px;
+        -fx-background-radius: 10px;
+      """
+      onAction = _ => backToHome()
+    }
+
+    val mainLayout = new VBox(10, mainContainer, backButton) {
+      alignment = Pos.CENTER
+    }
+
+    new AppScene(title, mainLayout)
   }
 
 

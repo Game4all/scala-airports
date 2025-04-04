@@ -17,17 +17,19 @@ import scalafx.scene.control.ProgressIndicator
 import scalafx.animation.FadeTransition
 import scalafx.util.Duration
 
-private val appWidth = 1200
-private val appHeight = 800
+private val appWidth = 1536
+private val appHeight = 768
 
 class AppScene(title: Label, content: Node) extends Scene(appWidth, appHeight) {
   val rootPane = new StackPane()
   root = rootPane
 
-  val backgroundImage = new Image(getClass.getResource("/airplane-image.jpg").toExternalForm)
-    val backgroundView = new ImageView(backgroundImage) {
-        preserveRatio = false
-    }
+  val backgroundImage = new Image(
+    getClass.getResource("/airplane-image.jpg").toExternalForm
+  )
+  val backgroundView = new ImageView(backgroundImage) {
+    preserveRatio = false
+  }
 
   val copyright = new Label("© 2025 Airport Explorer") {
     style = "-fx-fill: white; -fx-font-weight: bold; -fx-padding: 10px;"
@@ -54,8 +56,8 @@ class AppScene(title: Label, content: Node) extends Scene(appWidth, appHeight) {
 
   rootPane.children.addAll(backgroundView, mainContainer)
 
-  this.width.onChange { (_, _, newWidth) => adjustBackgroundSize()}
-  this.height.onChange { (_, _, newHeight) => adjustBackgroundSize()}
+  this.width.onChange { (_, _, newWidth) => adjustBackgroundSize() }
+  this.height.onChange { (_, _, newHeight) => adjustBackgroundSize() }
   def adjustBackgroundSize(): Unit = {
     backgroundView.fitWidth = this.getWidth
     backgroundView.fitHeight = this.getHeight
@@ -66,8 +68,14 @@ class LoadingScene extends Scene(appWidth, appHeight) {
   private val rootPane = new StackPane()
   root = rootPane
 
-  // Background image
-  private val backgroundImage = new Image(getClass.getResource("/airplane-image.jpg").toExternalForm)
+  def this(loadingText: String) = {
+    this()
+    waitingLabel.text = loadingText
+  }
+
+  private val backgroundImage = new Image(
+    getClass.getResource("/airplane-image.jpg").toExternalForm
+  )
   private val backgroundView = new ImageView(backgroundImage) {
     preserveRatio = false
   }
@@ -94,7 +102,8 @@ class LoadingScene extends Scene(appWidth, appHeight) {
   private val waitingBox = new VBox(20, waitingLabel, progressIndicator) {
     alignment = Pos.CENTER
     padding = Insets(20)
-    style = "-fx-background-color: rgba(0, 0, 0, 0.5); -fx-background-radius: 10;"
+    style =
+      "-fx-background-color: rgba(0, 0, 0, 0.5); -fx-background-radius: 10;"
   }
 
   private val mainContainer = new StackPane() {

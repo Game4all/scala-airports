@@ -44,8 +44,8 @@ object AirportApp extends JFXApp3 {
 
     stage = new JFXApp3.PrimaryStage {
       title = "Airport Explorer"
-      fullScreen = true
-      fullScreenExitHint = ""
+      // fullScreen = true
+      // fullScreenExitHint = ""
       scene = createHomeScene()
     }
 
@@ -54,14 +54,14 @@ object AirportApp extends JFXApp3 {
 
   def backToHome(): Unit = {
     stage.scene = if (homeScene != null) homeScene else createHomeScene()
-    stage.fullScreen = true
+    // stage.fullScreen = true
   }
 
   def handleQueryForm(countryList: ObservableBuffer[String], selectedCodeCountry: String): Unit = {
       if (selectedCodeCountry.nonEmpty && countryList.contains(selectedCodeCountry)) {
         val selectedCountry = selectedCodeCountry.split(" - ")(1).trim
-        stage.scene = new LoadingScene()
-        stage.fullScreen = true
+        stage.scene = new LoadingScene("Fetching country data...")
+        // stage.fullScreen = true
 
         Future {
           if (!cacheAirportData.contains(selectedCountry)) {
@@ -70,7 +70,7 @@ object AirportApp extends JFXApp3 {
           }
           javafx.application.Platform.runLater(() => 
             stage.scene = createCountryScene(selectedCountry, cacheAirportData(selectedCountry))
-            stage.fullScreen = true
+            // stage.fullScreen = true
           )
         }
       }
@@ -185,8 +185,8 @@ object AirportApp extends JFXApp3 {
       font = new Font("Arial", 18)
       style = "-fx-background-color:rgb(123, 168, 134); -fx-text-fill: white;"
       onAction = _ => {
-        stage.scene = new LoadingScene()
-        stage.fullScreen = true
+        stage.scene = new LoadingScene("Compiling report... (May take a while)")
+        // stage.fullScreen = true
 
         Future {
           val topCountries = DBQueries.fetchTopCountries(db, 10, (col: slick.lifted.Rep[Int]) => slick.lifted.ColumnOrdered(col, slick.ast.Ordering(slick.ast.Ordering.Desc)))
@@ -197,7 +197,7 @@ object AirportApp extends JFXApp3 {
 
           javafx.application.Platform.runLater(() => 
             stage.scene = createRapportScene(topCountries, countrySurfaceSorted, topLattitude)
-            stage.fullScreen = true
+            // stage.fullScreen = true
           )
         }
       }

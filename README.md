@@ -1,5 +1,8 @@
 ## Projet Functionnal Programming Scala
 
+BALSALOBRE Thomas
+ARRIESSE Lucas
+
 
 ### Feature list
 - [x] Parsing des fichiers CSV
@@ -21,3 +24,10 @@
     - `queries.scala` : Code des requêtes demandées en SQL avec slick
     - `app.scala` : Interface utilisateur (GUI) bonus interface.
     - `gui_base.scala` : Classes commune pour interface utilisateur (GUI).
+
+
+### Lancement du projet
+
+```bash
+sbt run
+```

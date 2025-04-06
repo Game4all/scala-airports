@@ -16,6 +16,8 @@ import scalafx.scene.control.Alert.AlertType
 import scala.concurrent.ExecutionContext.Implicits.global
 import scalafx.beans.property.StringProperty
 import scala.annotation.elidable
+import scala.util.Success
+import scala.util.Failure
 
 object AirportApp extends JFXApp3 {
   private var db: DatasetDB = uninitialized
@@ -66,22 +68,33 @@ object AirportApp extends JFXApp3 {
       selectedCodeCountry.nonEmpty && countryList.contains(selectedCodeCountry)
     ) {
       val selectedCountry = selectedCodeCountry.split(" - ")(1).trim
-      stage.scene = new LoadingScene("Fetching country data...")
-      // stage.fullScreen = true
+      val prevStage = stage.scene.value
 
-      Future {
-        if (!cacheAirportData.contains(selectedCountry)) {
-          val (_, airports) =
-            DBQueries.fetchCountryAirportsRunways(db, selectedCountry)
-          cacheAirportData(selectedCountry) = airports
-        }
-        javafx.application.Platform.runLater(() =>
-          stage.scene = createCountryScene(
-            selectedCountry,
-            cacheAirportData(selectedCountry)
+      stage.scene = new LoadingScene("Fetching country data...")
+
+      val countryAirportData = cacheAirportData.get(selectedCountry) match
+        case Some(data) => Future.successful((selectedCountry, data))
+        case None =>
+          DBQueries.fetchCountryAirportsRunways(db, selectedCountry).map {
+            (_, ap_data) =>
+              {
+                // on fait une mise en cache des données récup de la bdd pour accélérer les prochaines demandes pour le mm^ pays
+                cacheAirportData(selectedCountry) = ap_data
+                (selectedCountry, ap_data)
+              }
+          };
+
+      countryAirportData.onComplete {
+        case Success(selectedC, airports) =>
+          javafx.application.Platform.runLater(() =>
+            stage.scene = createCountryScene(
+              selectedC,
+              airports
+            )
           )
-          // stage.fullScreen = true
-        )
+        case Failure(exception) =>
+          stage.scene =
+            prevStage // on revient a l'écran d'avant si jamais on a un problème avec la future
       }
     } else {
       if (selectedCodeCountry.isEmpty) {
@@ -207,31 +220,34 @@ object AirportApp extends JFXApp3 {
       font = new Font("Arial", 18)
       style = "-fx-background-color:rgb(123, 168, 134); -fx-text-fill: white;"
       onAction = _ => {
+        val prevScene = stage.scene.value
         stage.scene = new LoadingScene("Compiling report... (May take a while)")
         // stage.fullScreen = true
 
-        Future {
-          val topCountries = DBQueries.fetchTopCountries(
+        // on récupère les données en parallèle pour simplifier le processus
+        DBQueries
+          .fetchTopCountries(
             db,
             10,
             (col: slick.lifted.Rep[Int]) =>
               slick.lifted
                 .ColumnOrdered(col, slick.ast.Ordering(slick.ast.Ordering.Desc))
           )
-          val countrySurface = DBQueries.fetchSurfaceTypesPerCountry(db)
-          // order by country name
-          val countrySurfaceSorted = countrySurface.sortBy(_._1.name)
-          val topLattitude = DBQueries.fetchMostCommonLatitudes(db, 10)
-
-          javafx.application.Platform.runLater(() =>
-            stage.scene = createRapportScene(
-              topCountries,
-              countrySurfaceSorted,
-              topLattitude
-            )
-            // stage.fullScreen = true
-          )
-        }
+          .zip(DBQueries.fetchSurfaceTypesPerCountry(db))
+          .zip(DBQueries.fetchMostCommonLatitudes(db, 10))
+          .map { case ((a, b), c) => (a, b, c) }
+          .onComplete {
+            case Success(top_countries, surfaces, latitudes) =>
+              javafx.application.Platform.runLater(() =>
+                stage.scene = createRapportScene(
+                  top_countries,
+                  surfaces,
+                  latitudes
+                )
+                // stage.fullScreen = true
+              )
+            case Failure(_) => stage.scene = prevScene
+          }
       }
     }
 

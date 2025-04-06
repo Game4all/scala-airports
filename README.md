@@ -10,7 +10,7 @@
 - [x] GUI avec JavaFX
 - [x] Fuzzy matching (fait dans l'UI + dans le code requête)
 - [x] BDD SQL avec H2 + slick
-- [ ] Utiliser Futures pour la BDD      
+- [x] Utiliser Futures pour la BDD      
 
 ### Explication de la structure de fichiers
 
@@ -20,3 +20,4 @@
     - `models.scala` : Modèles (Aéroport, Piste et Pays + companion objects)
     - `queries.scala` : Code des requêtes demandées en SQL avec slick
     - `app.scala` : Interface utilisateur (GUI) bonus interface.
+    - `gui_base.scala` : Classes commune pour interface utilisateur (GUI).
